@@ -17,6 +17,16 @@
             <v-list-item-title v-text="accountMetadata.companyName" />
             <v-list-item-subtitle v-text="latestEventMessage" />
           </v-list-item-content>
+          <v-list-item-icon
+            v-if="displayExtrnalLink"
+            class="status-indicator-wrapper"
+          >
+            <v-icon
+              @click="onOpenExtrnalLink"
+            >
+              mdi-open-in-new
+            </v-icon>
+          </v-list-item-icon>
           <v-dialog width="500px">
             <template #activator="{ on, attrs }">
               <v-list-item-icon>
@@ -49,11 +59,14 @@
 </template>
 
 <script lang="ts">
+import { shell } from 'electron';
 import { computed, defineComponent } from '@vue/composition-api';
 import { AccountState } from '@/ui/components/app/accountsState';
 import { AccountStatus } from '@/backend/eventEmitters/EventEmitter';
+import { CsvConfig, JsonConfig, OutputVendorName } from '@/backend/configManager/configManager';
 import AccountCardStatusIndicator from '@/ui/components/shared/log/AccountCardStatusIndicator.vue';
 import ACCOUNT_METADATA, { AccountMetadata } from '@/accountsMetadata';
+import store from '@/ui/store';
 
 export default defineComponent({
   components: {
@@ -77,9 +90,34 @@ export default defineComponent({
     const errorMessage = computed(() => props.accountState.events.find((event) => event.error)?.error?.message);
 
     const accountMetadata: AccountMetadata = ACCOUNT_METADATA.importers[props.accountState.id] || ACCOUNT_METADATA.exporters[props.accountState.id];
+
+    const displayExtrnalLink = computed<boolean>(() => Object.values(OutputVendorName).includes(accountMetadata.companyKey as OutputVendorName)
+    && props.accountState.status === AccountStatus.DONE);
+
     return {
-      latestEventMessage, accountMetadata, displayTheShowLogsIcon, fullLog, errorMessage
+      latestEventMessage, accountMetadata, displayTheShowLogsIcon, fullLog, errorMessage, displayExtrnalLink
     };
+  },
+
+  methods: {
+    onOpenExtrnalLink() {
+      const exporter = store.getters.Config.getExporter(this.accountState.id as OutputVendorName);
+      switch (this.accountState.id) {
+        case OutputVendorName.CSV:
+          shell.openPath((exporter as CsvConfig).options.filePath);
+          break;
+        case OutputVendorName.JSON:
+          shell.openPath((exporter as JsonConfig).options.filePath);
+          break;
+        case OutputVendorName.YNAB:
+          break;
+        case OutputVendorName.GOOGLE_SHEETS:
+          break;
+
+        default:
+          break;
+      }
+    }
   }
 });
 </script>

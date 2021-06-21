@@ -51,7 +51,7 @@ export default defineComponent({
   props: {
     accountStatus: {
       required: true,
-      type: Object as PropType<AccountStatus>
+      type: String as PropType<AccountStatus>
     },
     errorMessage: {
       type: String,
